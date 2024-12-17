@@ -7,33 +7,33 @@ on:
   workflow_dispatch:
     inputs:
       repository:
-        description: 'Repository'
+        description: "Repository"
         required: true
-        default: 'T-T-Software-Solution/ttss-fe-mono'
+        default: "T-T-Software-Solution/ttss-fe-mono"
       branch:
-        description: 'Branch'
+        description: "Branch"
         required: true
-        default: 'main'
+        default: "main"
       image_name:
-        description: 'Image Name'
+        description: "Image Name"
         required: true
-        default: 'ttss/backoffice'
+        default: "ttss/backoffice"
       image_tag:
-        description: 'Image Tag'
+        description: "Image Tag"
         required: true
-        default: 'latest'
+        default: "latest"
       working_dir:
-        description: 'Working Directory'
+        description: "Working Directory"
         required: true
-        default: '.'
+        default: "."
       project_dir:
-        description: 'Project Directory'
+        description: "Project Directory"
         required: true
-        default: 'apps/backoffice'
+        default: "apps/backoffice"
       dockerfile:
-        description: 'Dockerfile'
+        description: "Dockerfile"
         required: true
-        default: './apps/backoffice/Dockerfile'
+        default: "./apps/backoffice/Dockerfile"
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
@@ -113,6 +113,11 @@ jobs:
         run: |
           docker build --build-arg PROJECT_DIR=${{ inputs.project_dir }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} .
           docker push ${{ env.IMAGE }}
+
+      - name: Instructions
+        run: |
+          echo "::notice::🚀 Deployed ${{ env.IMAGE }}"
+          echo "::notice::You can now use the image by running: docker pull ${{env.container_registry_server}}/${{ env.IMAGE }}"
 
       # - name: Build
       #   uses: docker/build-push-action@v5
