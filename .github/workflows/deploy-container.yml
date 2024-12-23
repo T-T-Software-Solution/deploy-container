@@ -26,10 +26,10 @@ on:
         description: "Working Directory"
         required: true
         default: "."
-      project_dir:
-        description: "Project Directory"
+      build_args:
+        description: "Build Arguments, JSON format, type: Record<string, string>"
         required: true
-        default: "apps/backoffice"
+        default: "{ \"PROJECT_DIR\": \"apps/backoffice\" }"
       dockerfile:
         description: "Dockerfile"
         required: true
@@ -51,21 +51,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     include:
-    #       # Frontend Backoffice
-    #       - service_name: Frontend Backoffice
-    #         repository: T-T-Software-Solution/ttss-fe-mono
-    #         branch: main
-    #         image_name: ttss-fe-backoffice
-    #         image_tag: latest
-    #         working_dir: .
-    #         project_dir: apps/backoffice
-    #         dockerfile: ./apps/backoffice/Dockerfile
-    #         container_app_name: fe-backoffice
-    #         container_app_resource_group: demo-source-gen
 
     steps:
       - name: Set an environment variable
@@ -89,8 +74,25 @@ jobs:
           echo "IMAGE_NAME=${{ inputs.image_name }}"
           echo "IMAGE_TAG=${{ inputs.image_tag }}"
           echo "WORKING_DIR=${{ inputs.working_dir }}"
-          echo "PROJECT_DIR=${{ inputs.project_dir }}"
           echo "DOCKERFILE=${{ inputs.dockerfile }}"
+          echo "BUILD_ARGS=${{ inputs.build_args }}"
+      
+      # Ref: https://github.com/actions/github-script/issues/56#issuecomment-642188313
+      - name: Parse Build Arguments
+        id: parse-build-args
+        uses: actions/github-script@v7
+        env:
+          BUILD_ARGS: ${{ inputs.build_args }}
+        with:
+          script: |
+            const buildArgs = JSON.parse(process.env.BUILD_ARGS);
+            console.log("buildArgs", buildArgs);
+            const formattedString = Object.entries(buildArgs)
+              .map(([key, value]) => `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`)
+              .join(' ');
+            console.log("formattedString", formattedString);
+            return formattedString
+          result-encoding: string
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -109,9 +111,9 @@ jobs:
 
       - name: Build and publish docker image
         working-directory: ${{ inputs.working_dir }}
-        shell: bash
         run: |
-          docker build --build-arg PROJECT_DIR=${{ inputs.project_dir }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} .
+          echo "docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} ."
+          docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} .
           docker push ${{ env.IMAGE }}
 
       - name: Instructions
