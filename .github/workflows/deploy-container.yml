@@ -93,6 +93,7 @@ jobs:
                 const secretName = parsedValue.substring(2, parsedValue.length - 1);
                 const githubActionSecretName = `BUILD_ARGS__${secretName}`;
                 const secrets = JSON.parse(process.env.SECRETS);
+                const secretValue = secrets[githubActionSecretName];
                 console.log(`Secret ${githubActionSecretName} found: ${secretValue}`);
                 if (!secretValue) {
                   throw new Error(`Secret ${githubActionSecretName} not found`);
@@ -101,6 +102,7 @@ jobs:
               }
               return `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`;
             }
+
             const buildArgs = JSON.parse(process.env.BUILD_ARGS);
             console.log("buildArgs", buildArgs);
             const formattedString = Object.entries(buildArgs)
