@@ -83,12 +83,28 @@ jobs:
         uses: actions/github-script@v7
         env:
           BUILD_ARGS: ${{ inputs.build_args }}
+          SECRETS: ${{ toJSON(secrets) }}
         with:
           script: |
+            function parseBuildArgs([key, value]) {
+              // If value in pattern of `${GITHUB_SECRET_NAME}`, then replace it with the actual value
+              const parsedValue = value.trim();
+              if (parsedValue.startsWith("${") && parsedValue.endsWith("}")) {
+                const secretName = parsedValue.substring(2, parsedValue.length - 1);
+                const githubActionSecretName = `BUILD_ARGS__${secretName}`;
+                const secrets = JSON.parse(process.env.SECRETS);
+                console.log(`Secret ${githubActionSecretName} found: ${secretValue}`);
+                if (!secretValue) {
+                  throw new Error(`Secret ${githubActionSecretName} not found`);
+                }
+                return `--build-arg ${key}="${String(secretValue).replace(/"/g, '\\"')}"`;
+              }
+              return `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`;
+            }
             const buildArgs = JSON.parse(process.env.BUILD_ARGS);
             console.log("buildArgs", buildArgs);
             const formattedString = Object.entries(buildArgs)
-              .map(([key, value]) => `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`)
+              .map(parseBuildArgs)
               .join(' ');
             console.log("formattedString", formattedString);
             return formattedString
