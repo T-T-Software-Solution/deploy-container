@@ -46,6 +46,7 @@ env:
 jobs:
   build-and-push-image:
     name: "🚀 Deploy"
+    run-name: 🚀 Deploy from ${{ inputs.repository }} branch ${{ inputs.branch }} by @${{ github.actor }}
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
