@@ -1,7 +1,7 @@
 # https://www.thadaw.com/posts/publishing-docker-image-on-git-hub-package-publicly-with-github-actions-6wrk7rh/
 # https://docs.github.com/en/actions/publishing-packages/publishing-docker-images#publishing-images-to-github-packages
 name: Deploy
-
+run-name: Deploy from ${{ inputs.repository }}[${{ inputs.branch }}] by @${{ github.actor }}
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
   workflow_dispatch:
