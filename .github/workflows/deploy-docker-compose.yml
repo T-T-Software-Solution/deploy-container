@@ -1,10 +1,41 @@
 name: Deploy Docker Compose
-
+# Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
   workflow_dispatch:
+    inputs:
+      repository:
+        description: "Repository"
+        required: true
+        default: "T-T-Software-Solution/ttss-fe-mono"
+      branch:
+        description: "Branch"
+        required: true
+        default: "main"
+      target_services:
+        description: "Target Services using comma separated values, e.g. 'service1,service2'"
+        required: true
+        default: "backend,frontend"
+      image_tag:
+        description: "Image Tag"
+        required: true
+        default: "test-2024-01-24"
+      working_dir:
+        description: "Working Directory"
+        required: true
+        default: "."
+      docker-compose-file:
+        description: "Docker Compose File"
+        required: true
+        default: "docker-compose.yml"
 
 jobs:
-  deploy:
+  build-and-push-image:
+    name: "🚀 Deploy"
     runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - run: echo "Deploying Docker Compose"
