@@ -1,5 +1,6 @@
 # https://www.thadaw.com/posts/publishing-docker-image-on-git-hub-package-publicly-with-github-actions-6wrk7rh/
 # https://docs.github.com/en/actions/publishing-packages/publishing-docker-images#publishing-images-to-github-packages
+
 name: Deploy
 run-name: Deploy from ${{ inputs.repository }}[${{ inputs.branch }}][${{ inputs.image_name }}] by @${{ github.actor }}
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
@@ -35,13 +36,6 @@ on:
         required: true
         default: "./apps/backoffice/Dockerfile"
 
-# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
-# env:
-#   container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
-#   container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
-#   container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
-
-# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-and-push-image:
     name: "🚀 Deploy"
