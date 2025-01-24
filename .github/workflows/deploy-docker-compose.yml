@@ -30,6 +30,7 @@ on:
 
 env:
   bun_version: 1.2.0
+  get_matrix_dir: scripts
 
 jobs:
   get-matrix:
@@ -47,10 +48,12 @@ jobs:
       
       - name: Install Bun Dependencies
         run: bun install
+        working-directory: ${{ env.get_matrix_dir }}
 
       - name: Run Bun
         id: set-matrix
-        run: bun run index.ts
+        run: bun run build-matrix
+        working-directory: ${{ env.get_matrix_dir }}
 
   build-and-push-image:
     needs: get-matrix

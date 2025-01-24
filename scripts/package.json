@@ -2,6 +2,9 @@
   "name": "scripts",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "build-matrix": "bun run src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
