@@ -12,7 +12,8 @@ async function main() {
     imageTag: env.IMAGE_TAG,
     services: env.SERVICES,
     dockerComposeFile: env.DOCKER_COMPOSE_FILE,
-    scope: env.SCOPE
+    scope: env.SCOPE,
+    workingDir: env.WORKING_DIR,
   })).init();
 
   core.setOutput('matrix', JSON.stringify(matrix.build()));

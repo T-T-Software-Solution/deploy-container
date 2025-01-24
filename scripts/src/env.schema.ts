@@ -37,6 +37,12 @@ export const envSchema = z.object({
    * e.g. `docker-compose.yml`
    */
   DOCKER_COMPOSE_FILE: z.string(),
+  /**
+   * The working directory
+   * 
+   * e.g. .
+   */
+  WORKING_DIR: z.string(),
 });
 
 export function getEnv(env: Record<string, string | undefined>) {
