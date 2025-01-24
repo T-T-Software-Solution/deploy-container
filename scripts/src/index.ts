@@ -1,4 +1,3 @@
-import { Octokit } from '@octokit/core';
 import fs from 'fs'
 import { extractErorMessage } from './libs/error';
 import { parseDockerCompose } from './libs/docker-compose';
@@ -31,10 +30,6 @@ async function main({
   dockerComposeFile,
 }: DeployConfig) {
 
-  const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN,
-  });
-
   const file = fs.readFileSync(dockerComposeFile, 'utf8')
   const dockerCompose = parseDockerCompose(file);
 
@@ -64,11 +59,7 @@ async function main({
 }
 
 main({
-  repository: 'T-T-Software-Solution/gov-bkk',
-  branch: 'main.test-docker-compose',
-  imageTag: '2025-01-24-test',
-  services: ['landing-app-prod'],
-  dockerComposeFile: '../docker/docker-compose.yml',
+
 }).catch(
   (error) => {
     console.error(extractErorMessage(error));
