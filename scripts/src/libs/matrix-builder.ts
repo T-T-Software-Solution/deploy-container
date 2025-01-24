@@ -1,20 +1,45 @@
 
-export interface Matrix {
-
-
+export interface BuildDockerMatrix {
+  /**
+   * Repository
+   */
+  repository: string;
+  /**
+   * Branch
+   */
+  branch: string;
+  /**
+   * Image Name
+   */
+  image_name: string;
+  /**
+   * Image Tag
+   */
+  image_tag: string;
+  /**
+   * Working Directory
+   */
+  working_dir: string;
+  /**
+   * Build Arguments, JSON format, type: Record<string, string>
+   */
+  build_args: Record<string, string>;
+  /**
+   * Dockerfile
+   */
+  dockerfile: string;
 }
-  // repository: ${{ matrix.repository }}
-  //         branch: ${{ matrix.branch }}
-  //         image_name: ${{ matrix.image_name }}
-  //         image_tag: ${{ matrix.image_tag }}
-  //         working_dir: ${{ matrix.working_dir }}
-  //         build_args: ${{ matrix.build_args }}
-  //         dockerfile: ${{ matrix.dockerfile }}
+
+export interface DeploymentMatrix {
+  docker_image: BuildDockerMatrix[];
+}
 
 export class MatrixBuilder {
 
 
-  build(){
-
+  build(): DeploymentMatrix {
+    return {
+      docker_image: []
+    }
   }
 }
