@@ -1,4 +1,6 @@
 name: Deploy Docker Compose
+
+run-name: Deploy from ${{ inputs.repository }}[${{ inputs.branch }}] by @${{ github.actor }}
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
   workflow_dispatch:
@@ -15,6 +17,10 @@ on:
         description: "Target Services using comma separated values, e.g. 'service1,service2'"
         required: true
         default: "backend,frontend"
+      scope:
+        description: "Scope e.g. project name"
+        required: true
+        default: "demo"
       image_tag:
         description: "Image Tag"
         required: true
@@ -54,6 +60,14 @@ jobs:
         id: set-matrix
         run: bun run build-matrix
         working-directory: ${{ env.get_matrix_dir }}
+        env:
+          REPOSITORY: ${{ inputs.repository }}
+          BRANCH: ${{ inputs.branch }}
+          TARGET_SERVICES: ${{ inputs.target_services }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          WORKING_DIR: ${{ inputs.working_dir }}
+          DOCKER_COMPOSE_FILE: ${{ inputs.docker-compose-file }}
+          SCOPE: ${{ inputs.scope }}
 
   build-and-push-image:
     needs: get-matrix
