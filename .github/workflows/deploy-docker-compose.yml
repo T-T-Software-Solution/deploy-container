@@ -28,6 +28,9 @@ on:
         required: true
         default: "docker-compose.yml"
 
+env:
+  bun_version: 1.2.0
+
 jobs:
   get-matrix:
     name: "🔨 Get Matrix"
@@ -37,6 +40,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.bun_version }}
       
       - name: Install Bun Dependencies
         run: bun install
