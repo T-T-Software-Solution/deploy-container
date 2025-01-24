@@ -2,6 +2,7 @@ import { parseDockerCompose, type DockerCompose } from "./docker-compose";
 import type { DeploymentMatrix } from "./types";
 import fs from 'fs';
 import { levelUpPath } from "./utilts";
+import path from "path";
 
 export interface MatrixBuilderOptions {
   scope: string;
@@ -9,6 +10,7 @@ export interface MatrixBuilderOptions {
   repository: string;
   imageTag: string;
   services: string[];
+  workingDir: string;
   dockerComposeFile: string;
 }
 
@@ -19,7 +21,7 @@ export class MatrixBuilder {
   constructor(private options: MatrixBuilderOptions) { }
 
   async init() {
-    const file = await fs.promises.readFile(this.options.dockerComposeFile, 'utf8')
+    const file = await fs.promises.readFile(path.join(this.options.workingDir, this.options.dockerComposeFile), 'utf8')
     this.dockerCompose = parseDockerCompose(file);
     return this;
   }
