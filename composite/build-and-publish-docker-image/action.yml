@@ -1,4 +1,5 @@
 name: "Build and Publish Docker Image"
+description: "Build and Publish Docker Image to Container Registry"
 
 inputs:
   gh_token:

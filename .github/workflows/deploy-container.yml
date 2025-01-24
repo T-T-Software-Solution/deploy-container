@@ -48,11 +48,9 @@ jobs:
     steps:
       - name: Checkout Build Composite
         uses: actions/checkout@v4
-        with:
-          path: composite-actions
 
       - name: Call Composite build and publish docker image
-        uses: ./composite-actions/.github/workflows/composite/build-and-publish-docker-image
+        uses: ./composite/build-and-publish-docker-image
         with:
           secrets: ${{ toJson(secrets) }}
           gh_token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
