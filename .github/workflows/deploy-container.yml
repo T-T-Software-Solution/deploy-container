@@ -21,7 +21,7 @@ on:
       image_tag:
         description: "Image Tag"
         required: true
-        default: "latest"
+        default: "test-2024-01-24"
       working_dir:
         description: "Working Directory"
         required: true
@@ -36,11 +36,10 @@ on:
         default: "./apps/backoffice/Dockerfile"
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
-env:
-  container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
-  container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
-  container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
-  container_app_revision_suffix: gh-actions-${{ github.run_id }}-${{ github.run_attempt }}
+# env:
+#   container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
+#   container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
+#   container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
 
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
@@ -53,99 +52,24 @@ jobs:
       packages: write
 
     steps:
-      - name: Set an environment variable
-        run: echo "IMAGE=$container_registry_server/${{ inputs.image_name }}:${{ inputs.image_tag }}" >> $GITHUB_ENV
-
-      - name: Running Variables
-        run: |
-          echo "Global Variables"
-          echo "CONTAINER_REGISTRY_SERVER=$container_registry_server"
-          echo "CONTAINER_REGISTRY_USERNAME=$container_registry_username"
-          echo "CONTAINER_REGISTRY_PASSWORD=$container_registry_password"
-          echo "CONTAINER_APP_REVISION_SUFFIX=$container_app_revision_suffix"
-
-          echo "----------------------"
-          echo "Matrix Variables"
-          echo "----------------------"
-
-          echo "IMAGE=$IMAGE"
-          echo "REPOSITORY=${{ inputs.repository }}"
-          echo "BRANCH=${{ inputs.branch }}"
-          echo "IMAGE_NAME=${{ inputs.image_name }}"
-          echo "IMAGE_TAG=${{ inputs.image_tag }}"
-          echo "WORKING_DIR=${{ inputs.working_dir }}"
-          echo "DOCKERFILE=${{ inputs.dockerfile }}"
-          echo "BUILD_ARGS=${{ inputs.build_args }}"
-      
-      # Ref: https://github.com/actions/github-script/issues/56#issuecomment-642188313
-      - name: Parse Build Arguments
-        id: parse-build-args
-        uses: actions/github-script@v7
-        env:
-          BUILD_ARGS: ${{ inputs.build_args }}
-          SECRETS: ${{ toJSON(secrets) }}
-        with:
-          script: |
-            function parseBuildArgs([key, value]) {
-              // If value in pattern of `${GITHUB_SECRET_NAME}`, then replace it with the actual value
-              const parsedValue = value.trim();
-              if (parsedValue.startsWith("${") && parsedValue.endsWith("}")) {
-                const secretName = parsedValue.substring(2, parsedValue.length - 1);
-                const githubActionSecretName = `BUILD_ARGS__${secretName}`;
-                const secrets = JSON.parse(process.env.SECRETS);
-                const secretValue = secrets[githubActionSecretName];
-                console.log(`Secret ${githubActionSecretName} found: ${secretValue}`);
-                if (!secretValue) {
-                  throw new Error(`Secret ${githubActionSecretName} not found`);
-                }
-                return `--build-arg ${key}="${String(secretValue).replace(/"/g, '\\"')}"`;
-              }
-              return `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`;
-            }
-
-            const buildArgs = JSON.parse(process.env.BUILD_ARGS);
-            console.log("buildArgs", buildArgs);
-            const formattedString = Object.entries(buildArgs)
-              .map(parseBuildArgs)
-              .join(' ');
-            console.log("formattedString", formattedString);
-            return formattedString
-          result-encoding: string
-
-      - name: Checkout repository
+      - name: Checkout Build Composite
         uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.repository }}
-          ref: ${{ inputs.branch }}
-          token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          path: composite-actions
 
-      # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      - name: Call Composite build and publish docker image
+        uses: ./composite-actions/.github/workflows/composite/build-and-publish-docker-image
         with:
-          registry: ${{ env.container_registry_server }}
-          username: ${{ env.container_registry_username }}
-          password: ${{ env.container_registry_password }}
+          secrets: ${{ toJson(secrets) }}
+          gh_token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
+          container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
+          container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+          repository: ${{ inputs.repository }}
+          branch: ${{ inputs.branch }}
+          image_name: ${{ inputs.image_name }}
+          image_tag: ${{ inputs.image_tag }}
+          working_dir: ${{ inputs.working_dir }}
+          build_args: ${{ inputs.build_args }}
+          dockerfile: ${{ inputs.dockerfile }}
 
-      - name: Build and publish docker image
-        working-directory: ${{ inputs.working_dir }}
-        run: |
-          echo "docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} ."
-          docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} .
-          docker push ${{ env.IMAGE }}
-
-      - name: Instructions
-        run: |
-          echo "::notice::🚀 Deployed ${{ env.IMAGE }}"
-          echo "::notice::You can now use the image by running: docker pull ${{env.container_registry_server}}/${{ env.IMAGE }}"
-
-      # - name: Build
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ${{ env.fe_backoffice_working_dir }}
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
-      #     file: ${{ env.fe_backoffice_dockerfile }}
-      #     push: true
-      #     build-args: PROJECT_DIR=${{ env.fe_backoffice_project_dir }}
-      #     tags: latest

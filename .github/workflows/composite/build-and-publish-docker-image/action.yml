@@ -1,0 +1,137 @@
+name: "Build and Publish Docker Image"
+
+inputs:
+  gh_token:
+    description: "Github Token"
+    required: true
+  secrets:
+    description: "Github Secrets Object"
+    required: true
+  container_registry_server:
+    description: "Container Registry login server"
+    required: true
+  container_registry_username:
+    description: "Container Registry username"
+    required: true
+  container_registry_password:
+    description: "Container Registry password"
+    required: true
+  repository:
+    description: "Repository"
+    required: true
+  branch:
+    description: "Branch"
+    required: true
+  image_name:
+    description: "Image Name"
+    required: true
+  image_tag:
+    description: "Image Tag"
+    required: true
+  working_dir:
+    description: "Working Directory"
+    required: true
+    default: "."
+  build_args:
+    description: "Build Arguments, JSON format, type: Record<string, string> e.g. { \"PROJECT_DIR\": \"apps/backoffice\" }"
+  dockerfile:
+    description: "Dockerfile"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set an environment variable
+      shell: bash
+      run: echo "IMAGE=${{ inputs.container_registry_server }}/${{ inputs.image_name }}:${{ inputs.image_tag }}" >> $GITHUB_ENV
+
+    - name: Running Variables
+      shell: bash
+      run: |
+        echo "Global Variables"
+        echo "CONTAINER_REGISTRY_SERVER=${{ inputs.container_registry_server }}"
+        echo "CONTAINER_REGISTRY_USERNAME=${{ inputs.container_registry_username }}"
+        echo "CONTAINER_REGISTRY_PASSWORD=${{ inputs.container_registry_password }}"
+
+        echo "----------------------"
+        echo "Matrix Variables"
+        echo "----------------------"
+
+        echo "IMAGE=$IMAGE"
+        echo "REPOSITORY=${{ inputs.repository }}"
+        echo "BRANCH=${{ inputs.branch }}"
+        echo "IMAGE_NAME=${{ inputs.image_name }}"
+        echo "IMAGE_TAG=${{ inputs.image_tag }}"
+        echo "WORKING_DIR=${{ inputs.working_dir }}"
+        echo "DOCKERFILE=${{ inputs.dockerfile }}"
+        echo "BUILD_ARGS=${{ inputs.build_args }}"
+    
+    # Ref: https://github.com/actions/github-script/issues/56#issuecomment-642188313
+    - name: Parse Build Arguments
+      id: parse-build-args
+      uses: actions/github-script@v7
+      env:
+        BUILD_ARGS: ${{ inputs.build_args }}
+        SECRETS: ${{ inputs.secrets }}
+      with:
+        script: |
+          function parseBuildArgs([key, value]) {
+            // If value in pattern of `${GITHUB_SECRET_NAME}`, then replace it with the actual value
+            const parsedValue = value.trim();
+            if (parsedValue.startsWith("${") && parsedValue.endsWith("}")) {
+              const secretName = parsedValue.substring(2, parsedValue.length - 1);
+              const githubActionSecretName = `BUILD_ARGS__${secretName}`;
+              const secrets = JSON.parse(process.env.SECRETS);
+              const secretValue = secrets[githubActionSecretName];
+              console.log(`Secret ${githubActionSecretName} found: ${secretValue}`);
+              if (!secretValue) {
+                throw new Error(`Secret ${githubActionSecretName} not found`);
+              }
+              return `--build-arg ${key}="${String(secretValue).replace(/"/g, '\\"')}"`;
+            }
+            return `--build-arg ${key}="${String(value).replace(/"/g, '\\"')}"`;
+          }
+
+          const buildArgs = JSON.parse(process.env.BUILD_ARGS);
+          console.log("buildArgs", buildArgs);
+          const formattedString = Object.entries(buildArgs)
+            .map(parseBuildArgs)
+            .join(' ');
+          console.log("formattedString", formattedString);
+          return formattedString
+        result-encoding: string
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.branch }}
+        token: ${{ inputs.gh_token }}
+        path: tmp_repo
+
+    # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
+    - name: Log in to the Container registry
+      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+      with:
+        registry: ${{ inputs.container_registry_server }}
+        username: ${{ inputs.container_registry_username }}
+        password: ${{ inputs.container_registry_password }}
+
+    - name: Build and publish docker image
+      working-directory: tmp_repo/${{ inputs.working_dir }}
+      shell: bash
+      run: |
+        echo "docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} ."
+        docker build ${{ steps.parse-build-args.outputs.result }} -t ${{ env.IMAGE }} -f ${{ inputs.dockerfile }} .
+        docker push ${{ env.IMAGE }}
+
+    # - name: Build
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: ${{ env.fe_backoffice_working_dir }}
+    #     cache-from: type=gha
+    #     cache-to: type=gha,mode=max
+    #     file: ${{ env.fe_backoffice_dockerfile }}
+    #     push: true
+    #     build-args: PROJECT_DIR=${{ env.fe_backoffice_project_dir }}
+    #     tags: latest
