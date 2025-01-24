@@ -21,6 +21,7 @@ export class MatrixBuilder {
   async init() {
     const file = await fs.promises.readFile(this.options.dockerComposeFile, 'utf8')
     this.dockerCompose = parseDockerCompose(file);
+    return this;
   }
 
   build(): DeploymentMatrix {
