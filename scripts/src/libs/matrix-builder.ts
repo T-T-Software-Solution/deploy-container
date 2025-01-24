@@ -1,6 +1,7 @@
 import { parseDockerCompose, type DockerCompose } from "./docker-compose";
 import type { DeploymentMatrix } from "./types";
 import fs from 'fs';
+import { levelUpPath } from "./utilts";
 
 export interface MatrixBuilderOptions {
   scope: string;
@@ -27,9 +28,7 @@ export class MatrixBuilder {
     if (!this.dockerCompose) {
       throw new Error('Docker Compose file not loaded, call init() first');
     }
-    const matrix = {
-      docker_image: []
-    }
+    const docker_image: DeploymentMatrix['docker_image'] = [];
 
     for (const serviceName of services) {
       const service = this.dockerCompose.services[serviceName];
@@ -42,19 +41,21 @@ export class MatrixBuilder {
       const dockerfile = typeof service.build === 'string' ? undefined : service.build?.dockerfile;
       const buildArgs = typeof service.build === 'string' ? undefined : service.build?.args;
 
-      // await deploy(octokit, {
-      //   repository,
-      //   branch,
-      //   image_name: image,
-      //   image_tag: imageTag,
-      //   working_dir: workingDir ? levelUpPath(workingDir) : '.',
-      //   dockerfile: dockerfile ?? 'Dockerfile',
-      //   build_args: {
-      //     ...buildArgs ?? {},
-      //   }
-      // });
+      docker_image.push({
+        repository,
+        branch,
+        image_name: image,
+        image_tag: imageTag,
+        working_dir: workingDir ? levelUpPath(workingDir) : '.',
+        dockerfile: dockerfile ?? 'Dockerfile',
+        build_args: {
+          ...buildArgs ?? {},
+        }
+      });
     }
 
-    return matrix;
+    return {
+      docker_image,
+    };
   }
 }
