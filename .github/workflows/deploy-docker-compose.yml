@@ -29,13 +29,54 @@ on:
         default: "docker-compose.yml"
 
 jobs:
+  get-matrix:
+    name: "🔨 Get Matrix"
+    runs-on: ubuntu-24.04
+    outputs:
+      deployment-matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Install Bun Dependencies
+        run: bun install
+
+      - name: Run Bun
+        id: set-matrix
+        run: bun run index.ts
+
   build-and-push-image:
+    needs: get-matrix
     name: "🚀 Deploy"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
       packages: write
+  
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.get-matrix.outputs.deployment-matrix).docker_image }}
 
     steps:
-      - run: echo "Deploying Docker Compose"
+      - name: Checkout Build Composite
+        uses: actions/checkout@v4
+        with:
+          path: composite-actions
+
+      - name: Call Composite build and publish docker image
+        uses: ./composite-actions/.github/workflows/composite/build-and-publish-docker-image
+        with:
+          secrets: ${{ toJson(secrets) }}
+          gh_token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
+          container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
+          container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+          repository: ${{ matrix.repository }}
+          branch: ${{ matrix.branch }}
+          image_name: ${{ matrix.image_name }}
+          image_tag: ${{ matrix.image_tag }}
+          working_dir: ${{ matrix.working_dir }}
+          build_args: ${{ matrix.build_args }}
+          dockerfile: ${{ matrix.dockerfile }}
