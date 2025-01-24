@@ -1,0 +1,10 @@
+name: Deploy Docker Compose
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying Docker Compose"
