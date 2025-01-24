@@ -49,3 +49,5 @@ export const DockerComposeSchema = z.object({
 export const parseDockerCompose = (file: string): z.infer<typeof DockerComposeSchema> => {
   return DockerComposeSchema.parse(YAML.parse(file) as unknown);
 }
+
+export type DockerCompose = z.infer<typeof DockerComposeSchema>;
