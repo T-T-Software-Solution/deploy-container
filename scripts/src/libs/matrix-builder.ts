@@ -44,6 +44,8 @@ export class MatrixBuilder {
       const dockerfile = typeof service.build === 'string' ? undefined : service.build?.dockerfile;
       const buildArgs = typeof service.build === 'string' ? undefined : service.build?.args;
 
+      const build_args = JSON.stringify(buildArgs ?? {});
+
       docker_image.push({
         repository,
         branch,
@@ -51,9 +53,7 @@ export class MatrixBuilder {
         image_tag: imageTag,
         working_dir: workingDir ? levelUpPath(workingDir) : '.',
         dockerfile: dockerfile ?? 'Dockerfile',
-        build_args: {
-          ...buildArgs ?? {},
-        }
+        build_args
       });
     }
 

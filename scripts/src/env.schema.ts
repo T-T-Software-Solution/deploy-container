@@ -28,8 +28,7 @@ export const envSchema = z.object({
    */
   SERVICES: z.preprocess((val: unknown) => {
     if (val === '' || val === undefined || val === null) return [];
-    if (typeof val === 'number') return [val];
-    return typeof val === 'string' ? val.trim().split(',').map(Number) : [];
+    return typeof val === 'string' ? val.trim().split(',') : [];
   }, z.array(z.string())),
   /**
    * The path to the docker-compose file

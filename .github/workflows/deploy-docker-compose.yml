@@ -45,8 +45,27 @@ jobs:
     outputs:
       deployment-matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Debug
+        run: |
+          echo "Repository: ${{ inputs.repository }}"
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Target Services: ${{ inputs.target_services }}"
+          echo "Image Tag: ${{ inputs.image_tag }}"
+          echo "Working Directory: ${{ inputs.working_dir }}"
+          echo "Docker Compose File: ${{ inputs.docker_compose_file }}"
+          echo "Scope: ${{ inputs.scope }}"
+          echo "Services: ${{ inputs.target_services }}"
+          
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Checkout Target Docker Compose Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.branch }}
+          token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          path: target-repo
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -58,16 +77,20 @@ jobs:
 
       - name: Run Bun
         id: set-matrix
-        run: bun run build-matrix
+        run: |
+          pwd
+          tree -I node_modules
+          bun run build-matrix
         working-directory: ${{ env.get_matrix_dir }}
         env:
           REPOSITORY: ${{ inputs.repository }}
           BRANCH: ${{ inputs.branch }}
           TARGET_SERVICES: ${{ inputs.target_services }}
           IMAGE_TAG: ${{ inputs.image_tag }}
-          WORKING_DIR: ${{ inputs.working_dir }}
+          WORKING_DIR: ../target-repo/${{ inputs.working_dir }}
           DOCKER_COMPOSE_FILE: ${{ inputs.docker_compose_file }}
           SCOPE: ${{ inputs.scope }}
+          SERVICES: ${{ inputs.target_services }}
 
   build-and-push-image:
     needs: get-matrix

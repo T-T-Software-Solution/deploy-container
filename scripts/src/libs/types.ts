@@ -23,7 +23,7 @@ export interface BuildDockerMatrix {
   /**
    * Build Arguments, JSON format, type: Record<string, string>
    */
-  build_args: Record<string, string>;
+  build_args: string;
   /**
    * Dockerfile
    */

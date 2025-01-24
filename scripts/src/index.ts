@@ -5,6 +5,7 @@ import { getEnv } from './env.schema';
 async function main() {
 
   const env = getEnv(process.env);
+  console.log('Env', env);
 
   const matrix = await (new MatrixBuilder({
     branch: env.BRANCH,
@@ -16,7 +17,10 @@ async function main() {
     workingDir: env.WORKING_DIR,
   })).init();
 
-  core.setOutput('matrix', JSON.stringify(matrix.build()));
+
+  const targetMatrix = matrix.build();
+  console.log('Matrix:', targetMatrix);
+  core.setOutput('matrix', JSON.stringify(targetMatrix));
 
 }
 
