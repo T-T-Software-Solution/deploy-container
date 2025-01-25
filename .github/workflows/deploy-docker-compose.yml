@@ -1,10 +1,127 @@
 name: Deploy Docker Compose
 
+run-name: Deploy from ${{ inputs.repository }}[${{ inputs.branch }}] by @${{ github.actor }}
+# Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
   workflow_dispatch:
+    inputs:
+      repository:
+        description: "Repository"
+        required: true
+        default: "T-T-Software-Solution/ttss-fe-mono"
+      branch:
+        description: "Branch"
+        required: true
+        default: "main"
+      target_services:
+        description: "Target Services using comma separated values, e.g. 'service1,service2'"
+        required: true
+        default: "backend,frontend"
+      scope:
+        description: "Scope e.g. project name"
+        required: true
+        default: "demo"
+      image_tag:
+        description: "Image Tag"
+        required: true
+        default: "test-2024-01-24"
+      working_dir:
+        description: "Working Directory"
+        required: true
+        default: "."
+      docker_compose_file:
+        description: "Docker Compose File"
+        required: true
+        default: "docker-compose.yml"
+
+env:
+  bun_version: 1.2.0
+  get_matrix_dir: scripts
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  get-matrix:
+    name: "🔨 Get Matrix"
+    runs-on: ubuntu-24.04
+    outputs:
+      deployment-matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - run: echo "Deploying Docker Compose"
+      - name: Debug
+        run: |
+          echo "Repository: ${{ inputs.repository }}"
+          echo "Branch: ${{ inputs.branch }}"
+          echo "Target Services: ${{ inputs.target_services }}"
+          echo "Image Tag: ${{ inputs.image_tag }}"
+          echo "Working Directory: ${{ inputs.working_dir }}"
+          echo "Docker Compose File: ${{ inputs.docker_compose_file }}"
+          echo "Scope: ${{ inputs.scope }}"
+          echo "Services: ${{ inputs.target_services }}"
+          
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Target Docker Compose Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.branch }}
+          token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          path: target-repo
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.bun_version }}
+      
+      - name: Install Bun Dependencies
+        run: bun install
+        working-directory: ${{ env.get_matrix_dir }}
+
+      - name: Run Bun
+        id: set-matrix
+        run: |
+          pwd
+          tree -I node_modules
+          bun run build-matrix
+        working-directory: ${{ env.get_matrix_dir }}
+        env:
+          REPOSITORY: ${{ inputs.repository }}
+          BRANCH: ${{ inputs.branch }}
+          TARGET_SERVICES: ${{ inputs.target_services }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          WORKING_DIR: ../target-repo/${{ inputs.working_dir }}
+          DOCKER_COMPOSE_FILE: ${{ inputs.docker_compose_file }}
+          SCOPE: ${{ inputs.scope }}
+          SERVICES: ${{ inputs.target_services }}
+
+  build-and-push-image:
+    needs: get-matrix
+    name: "🚀 Deploy"
+    runs-on: ubuntu-24.04
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
+      packages: write
+  
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.get-matrix.outputs.deployment-matrix).docker_image }}
+
+    steps:
+      - name: Checkout Build Composite
+        uses: actions/checkout@v4
+
+      - name: Call Composite build and publish docker image
+        uses: ./composite/build-and-publish-docker-image
+        with:
+          secrets: ${{ toJson(secrets) }}
+          gh_token: ${{ secrets.GH_TOKEN_ORG_LEVEL_READ_WRITE_THADA_TTSS }}
+          container_registry_server: ${{ secrets.ACR_SERVER_NAME }}.azurecr.io
+          container_registry_username: ${{ secrets.ACR_SERVER_NAME }}
+          container_registry_password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+          repository: ${{ matrix.repository }}
+          branch: ${{ matrix.branch }}
+          image_name: ${{ matrix.image_name }}
+          image_tag: ${{ matrix.image_tag }}
+          working_dir: ${{ matrix.working_dir }}
+          build_args: ${{ matrix.build_args }}
+          dockerfile: ${{ matrix.dockerfile }}
