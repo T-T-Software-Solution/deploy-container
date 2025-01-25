@@ -78,8 +78,6 @@ jobs:
       - name: Run Bun
         id: set-matrix
         run: |
-          pwd
-          tree -I node_modules
           bun run build-matrix
         working-directory: ${{ env.get_matrix_dir }}
         env:
